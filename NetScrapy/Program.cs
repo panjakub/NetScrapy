@@ -7,15 +7,34 @@ namespace NetScrapy
     {
         static async Task Main(string[] args)
         {
+            ScraperConfig config;
+            var configManager = new JsonConfigManager();
+            
             using var log = new LoggerConfiguration()
                 .WriteTo.Console(theme: AnsiConsoleTheme.Code)
                 .CreateLogger();
 
+            CommandLineParser argParser = new CommandLineParser(args);
+            string jsonConfig = string.Empty;
+
+            try
+            {
+                if (argParser.arg.TryGetValue("config", out jsonConfig))
+                {
+                    log.Information($"Using {jsonConfig}");
+                    config = configManager.LoadConfig(jsonConfig);
+                }
+                else { return; }
+            }
+            catch (NullReferenceException)
+            {
+                argParser.PrintHelp();
+                return;
+            }
+
             var startTime = DateTime.Now;
             log.Information($"Started at {startTime}");
             
-            var configManager = new JsonConfigManager();
-            var config = configManager.LoadConfig(@"C:\Users\Jakub Kolakowski\source\repos\Scrape.Net\Scrape.Net\Configuration\demo_config.json");
             
             BatchProcessor batchProcessor = new BatchProcessor(config!);
             SitemapParser sitemapParser = new SitemapParser();
