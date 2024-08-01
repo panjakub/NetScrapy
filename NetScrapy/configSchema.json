@@ -1,0 +1,129 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Configuration schema for NetScrapy",
+    "type": "object",
+    "properties": {
+      "defaultHeaders": {
+        "type": "object",
+        "properties": {
+          "Accept": {
+            "type": "string"
+          },
+          "Accept-Encoding": {
+            "type": "string"
+          },
+          "Accept-Language": {
+            "type": "string"
+          },
+          "Cache-Control": {
+            "type": "string"
+          },
+          "Priority": {
+            "type": "string"
+          },
+          "Sec-Ch-Ua": {
+            "type": "string"
+          },
+          "Sec-Ch-Ua-Mobile": {
+            "type": "string"
+          },
+          "Sec-Ch-Ua-Platform": {
+            "type": "string"
+          },
+          "Sec-Fetch-Dest": {
+            "type": "string"
+          },
+          "Sec-Fetch-Mode": {
+            "type": "string"
+          },
+          "Sec-Fetch-Site": {
+            "type": "string"
+          },
+          "Sec-Fetch-User": {
+            "type": "string"
+          },
+          "Upgrade-Insecure-Requests": {
+            "type": "string"
+          },
+          "User-Agent": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "Accept",
+          "Accept-Encoding",
+          "Accept-Language",
+          "Cache-Control",
+          "Priority",
+          "Sec-Ch-Ua",
+          "Sec-Ch-Ua-Mobile",
+          "Sec-Ch-Ua-Platform",
+          "Sec-Fetch-Dest",
+          "Sec-Fetch-Mode",
+          "Sec-Fetch-Site",
+          "Sec-Fetch-User",
+          "Upgrade-Insecure-Requests",
+          "User-Agent"
+        ]
+      },
+      "globalSettings": {
+        "type": "object",
+        "properties": {
+          "batchSize": {
+            "type": "number"
+          },
+          "maxConcurrency": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "batchSize",
+          "maxConcurrency"
+        ]
+      },
+      "websites": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "string"
+            },
+            "sitemapUrl": {
+              "type": "string"
+            },
+            "timeout": {
+              "type": "number"
+            },
+            "selectors": {
+              "type": "object",
+              "properties": {
+                "Property": {
+                  "type": "string"
+                }
+              },
+              "required": []
+            },
+            "productUrlPattern": {
+              "type": "string"
+            },
+            "isJs": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "domain",
+            "sitemapUrl",
+            "timeout",
+            "selectors",
+            "productUrlPattern"
+          ]
+        }
+      }
+    },
+    "required": [
+      "defaultHeaders",
+      "globalSettings",
+      "websites"
+    ]
+  }

@@ -1,5 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 
+namespace NetScrapy;
+
 public class ScraperConfig
 {
     [JsonPropertyName("defaultHeaders")]
@@ -33,7 +35,7 @@ public class WebsiteConfig
     public int Timeout { get; set; }
 
     [JsonPropertyName("isJS")]
-    public bool isJS { get; set; }
+    public bool IsJs { get; set; }
 
     [JsonPropertyName("selectors")]
     public Dictionary<string, string>? Selectors { get; set; } = new Dictionary<string, string>();
@@ -44,4 +46,3 @@ public class WebsiteConfig
     [JsonPropertyName("excludeUrlPattern")]
     public string? ExcludeUrlPattern { get; set; }
 }
-

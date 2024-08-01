@@ -1,27 +1,27 @@
-﻿public class BatchManager
+﻿namespace NetScrapy;
+
+public class BatchManager
 {
     private readonly Dictionary<string, Queue<string?>> _selectedUris;
     private readonly Dictionary<string, DateTime> _lastAccessPerDomain;
     private readonly BatchProcessor _batchProcessor;
-    private readonly ScraperConfig _scraperConfig;
+    private readonly ScraperConfig? _scraperConfig;
     private readonly HtmlExtractorManager _extractor;
-    private readonly int _batchSize;
 
-    public BatchManager(Dictionary<string, Queue<string?>> selectedUris, ScraperConfig config, BatchProcessor batchProcessor, int batchSize)
+    public BatchManager(Dictionary<string, Queue<string?>> selectedUris, ScraperConfig? config, BatchProcessor batchProcessor)
     {
         _selectedUris = selectedUris;
         _lastAccessPerDomain = selectedUris.Keys.ToDictionary(k => k, _ => DateTime.Now);
         _batchProcessor = batchProcessor;
         _scraperConfig = config;
         _extractor = new HtmlExtractorManager();
-        _batchSize = batchSize;
     }
 
     public async Task RunAndSaveAsync()
     {
         while (_selectedUris.Any(d => d.Value.Count > 0))
         {
-            List<string> batch = GetNextBatch();
+            Queue<string> batch = GetNextBatch();
             Dictionary<string, string> results = await _batchProcessor.GetBatchContentAsync(batch);
 
             foreach (var result in results)
@@ -31,11 +31,11 @@
         }
     }
 
-    private List<string> GetNextBatch()
+    private Queue<string> GetNextBatch()
     {
-        List<string> batch = new List<string>();
+        Queue<string> batch = new Queue<string>();
 
-        var _lastAccessPerDomain = _selectedUris.Keys.ToDictionary(k => k, _ => DateTime.Now);
+        var lastAccessPerDomain = _selectedUris.Keys.ToDictionary(k => k, _ => DateTime.Now);
 
         while (_selectedUris.Values.Any(queue => queue.Count > 0))
         {
@@ -45,8 +45,8 @@
                 {
                     try
                     {
-                        batch.Add(_selectedUris[domain].Dequeue()!);
-                        _lastAccessPerDomain[domain] = DateTime.Now;
+                        batch.Enqueue(_selectedUris[domain].Dequeue()!);
+                        lastAccessPerDomain[domain] = DateTime.Now;
                     }
                     catch (InvalidOperationException)
                     {
@@ -68,7 +68,7 @@
     bool CanAccessDomain(string domain)
     {
         var lastAccess = _lastAccessPerDomain[domain];
-        var minDelaySeconds = _scraperConfig.Websites!
+        var minDelaySeconds = _scraperConfig?.Websites!
             .Where(w => w.Domain == domain)
             .Select(d => d.Timeout)
             .First();

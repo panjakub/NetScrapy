@@ -3,23 +3,22 @@ using Serilog.Sinks.SystemConsole.Themes;
 
 namespace NetScrapy
 {
-    internal class Program
+    internal static class Program
     {
-        static async Task Main(string[] args)
+        static async Task Main(string?[] args)
         {
-            ScraperConfig config;
+            ScraperConfig? config;
             var configManager = new JsonConfigManager();
-            
-            using var log = new LoggerConfiguration()
+
+            await using var log = new LoggerConfiguration()
                 .WriteTo.Console(theme: AnsiConsoleTheme.Code)
                 .CreateLogger();
 
             CommandLineParser argParser = new CommandLineParser(args);
-            string jsonConfig = string.Empty;
 
             try
             {
-                if (argParser.arg.TryGetValue("config", out jsonConfig))
+                if (argParser.Arg.TryGetValue("config", out var jsonConfig))
                 {
                     log.Information($"Using {jsonConfig}");
                     config = configManager.LoadConfig(jsonConfig);
@@ -67,12 +66,12 @@ namespace NetScrapy
             Dictionary<string, Queue<string?>> urisToParse = sitemapParser.BatchParseSitemapsAsync(rawSitemaps).Result.ToDictionary(
                 pair => new Uri(pair.Key).Host,
                 pair => new Queue<string?>(pair.Value
-                        .Where(m => m!.Contains(config.Websites!.Where(d => d.Domain! == new Uri(pair.Key).Host)
-                        .First()
-                        .ProductUrlPattern!)
+                        .Where(m => m!.Contains(config.Websites!
+                            .First(d => d.Domain! == new Uri(pair.Key).Host)
+                            .ProductUrlPattern!)
                         )
                     )
-                ); ;
+                );
 
 
             int totalItems = 0;
@@ -84,7 +83,7 @@ namespace NetScrapy
 
             log.Information($"{totalItems} elements to scrape.");
 
-            BatchManager scraper = new BatchManager(urisToParse, config, batchProcessor, config.GlobalSettings!.BatchSize);
+            BatchManager scraper = new BatchManager(urisToParse, config, batchProcessor);
             await scraper.RunAndSaveAsync();
 
             var finishTime = DateTime.Now;
@@ -95,7 +94,7 @@ namespace NetScrapy
 
             log.Information($"Processing speed: {avgProcessingTime}");
 
-            Log.CloseAndFlush();
+            await Log.CloseAndFlushAsync();
         }
     }
 }

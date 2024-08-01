@@ -1,5 +1,7 @@
 ﻿using System.Text.Json;
 
+namespace NetScrapy;
+
 public class JsonConfigManager
 {
     public ScraperConfig? LoadConfig(string filePath)

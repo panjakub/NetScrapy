@@ -1,10 +1,11 @@
-﻿using Serilog;
-using System.Net;
-using Serilog.Sinks.SystemConsole.Themes;
+﻿using System.Net;
 using Microsoft.Playwright;
-using Azure.Core;
+using Serilog;
+using Serilog.Sinks.SystemConsole.Themes;
 
-public class HttpClientWrapper
+namespace NetScrapy;
+
+public sealed class HttpClientWrapper
 {
     private readonly Dictionary<string, string> _defaultHeaders;
     private readonly Serilog.Core.Logger _log;
@@ -13,7 +14,7 @@ public class HttpClientWrapper
     {
         _defaultHeaders = defaultHeaders ?? new Dictionary<string, string>();
 
-        AddHeaders(defaultHeaders!);
+        if (defaultHeaders != null) AddHeaders(defaultHeaders);
 
         using Serilog.Core.Logger log = new LoggerConfiguration()
             .WriteTo.Console(theme: AnsiConsoleTheme.Code)
@@ -22,14 +23,11 @@ public class HttpClientWrapper
         _log = log;
     }
 
-    public virtual void AddHeaders(Dictionary<string, string> headers)
+    public void AddHeaders(Dictionary<string, string> headers)
     {
-        if (headers != null)
+        foreach (var header in headers)
         {
-            foreach (var header in headers)
-            {
-                _defaultHeaders[header.Key] = header.Value;
-            }
+            _defaultHeaders[header.Key] = header.Value;
         }
     }
 
@@ -53,19 +51,17 @@ public class HttpClientWrapper
         }
         else
         {
-            using (var httpClient = CreateHttpClient())
+            using var httpClient = CreateHttpClient();
+            var response = await httpClient.GetAsync(url);
+            try
             {
-                var response = await httpClient.GetAsync(url);
-                try
-                {
-                    response.EnsureSuccessStatusCode();
-                    return await response.Content.ReadAsStringAsync();
-                }
-                catch (HttpRequestException ex)
-                {
-                    await Task.Run(() => Log.Error($"{url} returned {ex.StatusCode})"));
-                    return await Task.Run(() => string.Empty);
-                }
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadAsStringAsync();
+            }
+            catch (HttpRequestException ex)
+            {
+                await Task.Run(() => Log.Error($"{url} returned {ex.StatusCode})"));
+                return await Task.Run(() => string.Empty);
             }
         }
     }
@@ -89,12 +85,11 @@ public class HttpClientWrapper
     }
 
 
-    private async Task<IPage> CreatePlaywrightClient()
+    private async Task<IPage> CreatePlaywrightClient() 
     {
         var client = await Playwright.CreateAsync();
 
         var chromium = client.Chromium;
-        _log.Information("Launching headless browser");
         var browser = await chromium.LaunchAsync(new() { Headless = true });
         var page = await browser.NewPageAsync();
         await page.SetExtraHTTPHeadersAsync(_defaultHeaders);

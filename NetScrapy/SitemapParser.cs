@@ -1,6 +1,7 @@
-﻿using Serilog;
-using System.Xml.Linq;
-using Serilog.Sinks.SystemConsole.Themes;
+﻿using System.Xml.Linq;
+using Serilog;
+
+namespace NetScrapy;
 
 public class SitemapParser
 {
@@ -49,22 +50,19 @@ public class SitemapParser
             XDocument doc = XDocument.Parse(sitemapContent);
 
             var urls = new Queue<string?>(doc.Descendants(ns + "url")
-                          .Select(u => u.Element(ns + "loc")?.Value)
-                          .Where(url => !string.IsNullOrEmpty(url))
-                          .ToList());
+                .Select(u => u.Element(ns + "loc")?.Value)
+                .Where(url => !string.IsNullOrEmpty(url)));
+                // .ToQueue());
 
-            var nestedSitemaps = new Queue<string?>(doc.Descendants(ns + "sitemap")
-                                    .Select(s => s.Element(ns + "loc")?.Value)
-                                    .Where(url => !string.IsNullOrEmpty(url))
-                                    .ToList());
+                var nestedSitemaps = new Queue<string?>(doc.Descendants(ns + "sitemap")
+                    .Select(s => s.Element(ns + "loc")?.Value)
+                    .Where(url => !string.IsNullOrEmpty(url)));
+                // .ToQueue());
 
             foreach (var nestedSitemapUrl in nestedSitemaps)
             {
                 var nestedTemp = await ParseSingleSitemapAsync(sitemapContent: nestedSitemapUrl!);
-                foreach (var item in nestedTemp)
-                {
-                    urls.Enqueue(nestedTemp.Dequeue());
-                }
+                urls.Enqueue(nestedTemp.Dequeue());
             }
 
             return await Task.Run(() => urls);
@@ -79,7 +77,7 @@ public class SitemapParser
     private Queue<string> ParseSitemapText(string sitemapContent)
     {
         return new Queue<string>(sitemapContent.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                             .Where(url => Uri.IsWellFormedUriString(url, UriKind.Absolute))
-                             .ToList());
+            .Where(url => Uri.IsWellFormedUriString(url, UriKind.Absolute)));
+        // .ToQueue());
     }
 }

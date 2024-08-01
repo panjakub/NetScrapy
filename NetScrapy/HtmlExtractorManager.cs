@@ -1,24 +1,26 @@
 ﻿using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
 
+namespace NetScrapy;
+
 class HtmlExtractorManager
 {
-    public async Task ExtractDataFromHtmlAsync((string url, string content) urlContent, ScraperConfig config)
+    public async Task ExtractDataFromHtmlAsync((string url, string content) urlContent, ScraperConfig? config)
     {
-        using var log = new LoggerConfiguration()
+        await using var log = new LoggerConfiguration()
             .WriteTo.Console(theme: AnsiConsoleTheme.Code)
             .CreateLogger();
 
-        HtmlSelectorExtractor _selectorExtractor = new HtmlSelectorExtractor();
-        var urlConfig = config.Websites!.Where(v => v.Domain == new Uri(urlContent.url).Host).First();
+        HtmlSelectorExtractor selectorExtractor = new HtmlSelectorExtractor();
+        var urlConfig = config?.Websites!.First(v => v.Domain == new Uri(urlContent.url).Host);
 
         try
         {
             var elements = new Dictionary<string, string>();
 
-            foreach (var selector in urlConfig.Selectors!)
+            foreach (var selector in urlConfig?.Selectors!)
             {
-                var value = _selectorExtractor.ParseWithSelector(urlContent.content, selector.Value);
+                var value = selectorExtractor.ParseWithSelector(urlContent.content, selector.Value);
                 elements[selector.Key] = value;
             }
 
@@ -32,7 +34,7 @@ class HtmlExtractorManager
 
             log.Information("Successfully scraped: {Url} - Elements: {@Elements}", result.Url, elements);
 
-            await ScrapedDataStorage.outputToSqlServer(result);
+            await ScrapedDataStorage.OutputToSqlServer(result);
         }
         catch (Exception ex)
         {
@@ -43,7 +45,7 @@ class HtmlExtractorManager
         }
         finally
         {
-            Log.CloseAndFlush();
+            await Log.CloseAndFlushAsync();
         }
     }
 }
