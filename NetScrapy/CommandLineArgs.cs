@@ -1,4 +1,6 @@
-﻿class CommandLineParser
+﻿using Serilog;
+
+class CommandLineParser
 {
     public Dictionary<string, string> arg { get; set; }
 
@@ -6,6 +8,7 @@
     {
         if (args.Count() == 0 || args.Contains("--help"))
         {
+            Log.Fatal("Configuration file is required.");
             PrintHelp();
             return; // Exit the application
         }
@@ -40,7 +43,7 @@
     {
         Console.WriteLine("Help:");
         Console.WriteLine("------");
-        Console.WriteLine("Usage: CommandLineApp [options]");
+        Console.WriteLine("Usage: netscrapy config.json [options]");
         Console.WriteLine();
         Console.WriteLine("Options:");
         Console.WriteLine("  --help             Display this help message");

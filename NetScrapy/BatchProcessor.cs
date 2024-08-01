@@ -14,7 +14,7 @@
         }
     }
 
-    public async Task<Dictionary<string, string>> GetBatchContentAsync(IEnumerable<string> items)
+    public async Task<Dictionary<string, string>> GetBatchContentAsync(IEnumerable<string> items, bool usePw = false)
     {
         var taskCompletionSources = new Dictionary<string, TaskCompletionSource<string>>();
         var tasks = new List<Task>();
@@ -38,12 +38,15 @@
         return results;
     }
 
-    private async Task RetrieveContentAsync(string item, TaskCompletionSource<string> tcs)
+    private async Task RetrieveContentAsync(string url, TaskCompletionSource<string> tcs)
     {
+        var urlConfig = _scraperConfig.Websites!.Where(v => v.Domain == new Uri(url).Host).First();
+        bool usePw = urlConfig.isJS && !url.EndsWith(".xml");
+
         try
         {
-            var response = await _httpClient.GetContentAsync(item);
-            tcs.SetResult(response);
+            var responsePw = await _httpClient.GetContentAsync(url, usePw);
+            tcs.SetResult(responsePw);
         }
         catch (Exception ex)
         {
