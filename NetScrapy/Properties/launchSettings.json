@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "NetScrapy": {
-      "commandName": "Project",
-      "commandLineArgs": "config=\"C:\\Users\\Jakub Kolakowski\\source\\repos\\NetScrapy\\NetScrapy\\demo_config.json\""
-    }
-  }
-}
