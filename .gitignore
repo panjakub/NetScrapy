@@ -362,7 +362,7 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
-**/NetScrapy/Properties/
+**/Properties/
 NetScrapy/demo_config.json
 
 # Common IntelliJ Platform excludes
