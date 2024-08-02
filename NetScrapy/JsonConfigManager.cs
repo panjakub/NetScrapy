@@ -4,9 +4,9 @@ namespace NetScrapy;
 
 public class JsonConfigManager
 {
-    public ScraperConfig? LoadConfig(string filePath)
+    public static ScraperConfig? LoadConfig(string filePath)
     {
-        string json = File.ReadAllText(filePath);
+        var json = File.ReadAllText(filePath);
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,

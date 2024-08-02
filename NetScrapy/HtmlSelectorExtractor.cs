@@ -2,7 +2,7 @@
 
 public class HtmlSelectorExtractor
 {
-    public string ParseWithSelector(string html, string selector)
+    public static string ParseWithSelector(string html, string selector)
     {
         var htmlDoc = new HtmlAgilityPack.HtmlDocument();
         htmlDoc.LoadHtml(html);
@@ -15,7 +15,7 @@ public class HtmlSelectorExtractor
 
         if (selector.Split("/").Last().StartsWith("@"))
         {
-            string attributeName = selector.Split("/").Last().Replace("@", String.Empty);
+            var attributeName = selector.Split("/").Last().Replace("@", String.Empty);
             return node.GetAttributeValue(attributeName, string.Empty).Trim();
         }
         else

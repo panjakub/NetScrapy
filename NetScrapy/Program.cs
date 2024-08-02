@@ -1,4 +1,5 @@
-﻿using Serilog;
+﻿using System.Text.RegularExpressions;
+using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
 
 namespace NetScrapy
@@ -21,7 +22,7 @@ namespace NetScrapy
                 if (argParser.Arg.TryGetValue("config", out var jsonConfig))
                 {
                     log.Information($"Using {jsonConfig}");
-                    config = configManager.LoadConfig(jsonConfig);
+                    config = JsonConfigManager.LoadConfig(jsonConfig);
                 }
                 else { return; }
             }
@@ -39,12 +40,11 @@ namespace NetScrapy
             SitemapParser sitemapParser = new SitemapParser();
 
 
-            var sitemapUris = config!.Websites!.Select(w => w.SitemapUrl);
 
             foreach (var website in config.Websites!)
             {
                 log.Debug($"Loaded config for {website.Domain}:");
-                log.Debug($"  Sitemap URL: {website.SitemapUrl}");
+                log.Debug($"  Sitemap URL: {website.SitemapUrls}");
                 log.Debug($"  Timeout: {website.Timeout}");
                 log.Debug($"  Product URL Pattern: {website.ProductUrlPattern}");
                 log.Debug($"  Selectors:");
@@ -60,15 +60,21 @@ namespace NetScrapy
                     log.Warning("    No selectors found");
                 }
             }
+            // var sitemapUris = config!.Websites!.Select(w => w.SitemapUrls.ForEach(s));
 
+            var sitemapUris = config!.Websites!.SelectMany(s => s.SitemapUrls);
             Dictionary<string, string> rawSitemaps = await batchProcessor.GetBatchContentAsync(sitemapUris!);
 
-            Dictionary<string, Queue<string?>> urisToParse = sitemapParser.BatchParseSitemapsAsync(rawSitemaps).Result.ToDictionary(
-                pair => new Uri(pair.Key).Host,
-                pair => new Queue<string?>(pair.Value
-                        .Where(m => m!.Contains(config.Websites!
-                            .First(d => d.Domain! == new Uri(pair.Key).Host)
-                            .ProductUrlPattern!)
+            var urisToParse = sitemapParser.BatchParseSitemapsAsync(rawSitemaps).Result
+                .GroupBy(pair => new Uri(pair.Key).Host)
+                .ToDictionary(
+                    group => group.Key,
+                    group => new Queue<string?>(
+                        group.SelectMany(pair => pair.Value
+                            .Where(m => Regex.IsMatch(m!, config.Websites!
+                                .First(d => d.Domain! == new Uri(pair.Key).Host)
+                                .ProductUrlPattern!)
+                            )
                         )
                     )
                 );

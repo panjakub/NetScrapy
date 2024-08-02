@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.IO.Compression;
+using System.Net;
 using Microsoft.Playwright;
 using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
@@ -36,12 +37,25 @@ public sealed class HttpClientWrapper
         if (usePw)
         {
             var page = await CreatePlaywrightClient();
+            string content = string.Empty;
+            
             try
             {
                 _log.Information($"Awaiting page content for {url}");
-                await page.GotoAsync(url, new() { Timeout = 100000 });
-                var content = await page.ContentAsync();
-                _log.Information($"Content retrieved for {url}, response length: {content.Length}");
+                await page.GotoAsync(url, new PageGotoOptions { Timeout = 100000 });
+                page.RequestFinished += async (_, response) =>
+                {
+                    if (response.Failure != null)
+                    {
+                        content = await page.ContentAsync();
+                        _log.Information($"Content retrieved for {url}, response length: {content.Length}");
+                    }
+                    else
+                    {
+                        _log.Error($"Error accessing {url}: {response.Failure}");
+                        content = String.Empty;
+                    }
+                };
                 return content;
             }
             finally
@@ -53,6 +67,19 @@ public sealed class HttpClientWrapper
         {
             using var httpClient = CreateHttpClient();
             var response = await httpClient.GetAsync(url);
+            if (url.Contains("gz"))
+            {
+                using (var compressed = await response.Content.ReadAsStreamAsync())
+                {
+                    using (var decompressed = new GZipStream(compressed, CompressionMode.Decompress))
+                    {
+                        using (var reader = new StreamReader(decompressed))
+                        {
+                            return await reader.ReadToEndAsync();
+                        }
+                    }
+                }
+            }
             try
             {
                 response.EnsureSuccessStatusCode();

@@ -20,7 +20,7 @@ class HtmlExtractorManager
 
             foreach (var selector in urlConfig?.Selectors!)
             {
-                var value = selectorExtractor.ParseWithSelector(urlContent.content, selector.Value);
+                var value = HtmlSelectorExtractor.ParseWithSelector(urlContent.content, selector.Value);
                 elements[selector.Key] = value;
             }
 

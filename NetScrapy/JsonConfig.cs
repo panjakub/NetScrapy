@@ -28,8 +28,8 @@ public class WebsiteConfig
     [JsonPropertyName("domain")]
     public string? Domain { get; set; }
 
-    [JsonPropertyName("sitemapUrl")]
-    public string? SitemapUrl { get; set; }
+    [JsonPropertyName("sitemapUrls")] 
+    public List<string?> SitemapUrls { get; set; } = new();
 
     [JsonPropertyName("timeout")]
     public int Timeout { get; set; }

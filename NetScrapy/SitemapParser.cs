@@ -52,7 +52,6 @@ public class SitemapParser
             var urls = new Queue<string?>(doc.Descendants(ns + "url")
                 .Select(u => u.Element(ns + "loc")?.Value)
                 .Where(url => !string.IsNullOrEmpty(url)));
-                // .ToQueue());
 
                 var nestedSitemaps = new Queue<string?>(doc.Descendants(ns + "sitemap")
                     .Select(s => s.Element(ns + "loc")?.Value)
@@ -78,6 +77,5 @@ public class SitemapParser
     {
         return new Queue<string>(sitemapContent.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
             .Where(url => Uri.IsWellFormedUriString(url, UriKind.Absolute)));
-        // .ToQueue());
     }
 }

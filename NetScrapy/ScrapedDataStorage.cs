@@ -9,7 +9,7 @@ public static class ScrapedDataStorage
         await using var context = new ScrapedDataContext();
         // Check if the entry already exists
         var existingEntry = await context.ScrapedData
-            .FirstOrDefaultAsync(sd => sd.Url == scrapedData.Url);
+            .FirstOrDefaultAsync(sd => sd.Url == scrapedData.Url && sd.Created == scrapedData.Created);
 
         if (existingEntry != null)
         {
