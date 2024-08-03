@@ -25,8 +25,8 @@ public class GlobalSettings
 
 public class WebsiteConfig
 {
-    [JsonPropertyName("domain")]
-    public string? Domain { get; set; }
+    [JsonPropertyName("acceptHost")]
+    public List<string?>? AcceptHost { get; set; }
 
     [JsonPropertyName("sitemapUrls")] 
     public List<string?> SitemapUrls { get; set; } = new();

@@ -4,14 +4,23 @@ namespace NetScrapy;
 
 public class JsonConfigManager
 {
-    public static ScraperConfig? LoadConfig(string filePath)
+    public static ScraperConfig? LoadConfig(string? filePath)
     {
-        var json = File.ReadAllText(filePath);
-        var options = new JsonSerializerOptions
+        if (filePath != null)
         {
-            PropertyNameCaseInsensitive = true,
-            ReadCommentHandling = JsonCommentHandling.Skip
-        };
-        return JsonSerializer.Deserialize<ScraperConfig>(json, options);
+            var json = File.ReadAllText(filePath);
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                ReadCommentHandling = JsonCommentHandling.Skip
+            };
+            return JsonSerializer.Deserialize<ScraperConfig>(json, options);
+        }
+        else
+        {
+            throw FileNotFoundException;
+        }
     }
+
+    public static Exception FileNotFoundException { get; set; }
 }

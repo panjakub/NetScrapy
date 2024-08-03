@@ -56,7 +56,6 @@ public class SitemapParser
                 var nestedSitemaps = new Queue<string?>(doc.Descendants(ns + "sitemap")
                     .Select(s => s.Element(ns + "loc")?.Value)
                     .Where(url => !string.IsNullOrEmpty(url)));
-                // .ToQueue());
 
             foreach (var nestedSitemapUrl in nestedSitemaps)
             {

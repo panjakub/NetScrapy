@@ -9,7 +9,7 @@ namespace NetScrapy
         static async Task Main(string?[] args)
         {
             ScraperConfig? config;
-            var configManager = new JsonConfigManager();
+            // var configManager = new JsonConfigManager();
 
             await using var log = new LoggerConfiguration()
                 .WriteTo.Console(theme: AnsiConsoleTheme.Code)
@@ -35,15 +35,12 @@ namespace NetScrapy
             var startTime = DateTime.Now;
             log.Information($"Started at {startTime}");
             
-            
             BatchProcessor batchProcessor = new BatchProcessor(config!);
             SitemapParser sitemapParser = new SitemapParser();
 
-
-
-            foreach (var website in config.Websites!)
+            foreach (var website in config?.Websites!)
             {
-                log.Debug($"Loaded config for {website.Domain}:");
+                log.Debug($"Loaded config for {website.AcceptHost}:");
                 log.Debug($"  Sitemap URL: {website.SitemapUrls}");
                 log.Debug($"  Timeout: {website.Timeout}");
                 log.Debug($"  Product URL Pattern: {website.ProductUrlPattern}");
@@ -62,7 +59,7 @@ namespace NetScrapy
             }
             // var sitemapUris = config!.Websites!.Select(w => w.SitemapUrls.ForEach(s));
 
-            var sitemapUris = config!.Websites!.SelectMany(s => s.SitemapUrls);
+            var sitemapUris = config.Websites!.SelectMany(s => s.SitemapUrls);
             Dictionary<string, string> rawSitemaps = await batchProcessor.GetBatchContentAsync(sitemapUris!);
 
             var urisToParse = sitemapParser.BatchParseSitemapsAsync(rawSitemaps).Result
@@ -72,7 +69,7 @@ namespace NetScrapy
                     group => new Queue<string?>(
                         group.SelectMany(pair => pair.Value
                             .Where(m => Regex.IsMatch(m!, config.Websites!
-                                .First(d => d.Domain! == new Uri(pair.Key).Host)
+                                .First(d => d.AcceptHost != null && d.AcceptHost.Any(host => host == new Uri(pair.Key).Host))
                                 .ProductUrlPattern!)
                             )
                         )

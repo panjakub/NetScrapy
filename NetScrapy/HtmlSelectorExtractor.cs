@@ -1,6 +1,6 @@
 ﻿namespace NetScrapy;
 
-public class HtmlSelectorExtractor
+public static class HtmlSelectorExtractor
 {
     public static string ParseWithSelector(string html, string selector)
     {

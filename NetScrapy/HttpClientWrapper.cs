@@ -67,18 +67,12 @@ public sealed class HttpClientWrapper
         {
             using var httpClient = CreateHttpClient();
             var response = await httpClient.GetAsync(url);
-            if (url.Contains("gz"))
+            if (url.EndsWith(".gz"))
             {
-                using (var compressed = await response.Content.ReadAsStreamAsync())
-                {
-                    using (var decompressed = new GZipStream(compressed, CompressionMode.Decompress))
-                    {
-                        using (var reader = new StreamReader(decompressed))
-                        {
-                            return await reader.ReadToEndAsync();
-                        }
-                    }
-                }
+                await using var compressed = await response.Content.ReadAsStreamAsync();
+                await using var decompressed = new GZipStream(compressed, CompressionMode.Decompress);
+                using var reader = new StreamReader(decompressed);
+                return await reader.ReadToEndAsync();
             }
             try
             {

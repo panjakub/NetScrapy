@@ -34,7 +34,16 @@ public class BatchProcessor
         var results = new Dictionary<string, string>();
         foreach (var kvp in taskCompletionSources)
         {
-            results[kvp.Key] = kvp.Value.Task.Result;
+            try
+            {
+                results[kvp.Key] = kvp.Value.Task.Result;
+            }
+            catch (AggregateException e)
+            {
+                Console.WriteLine($"Error on {kvp.Key}:");
+                Console.WriteLine(e);
+                throw;
+            }
         }
 
         return results;
@@ -42,7 +51,7 @@ public class BatchProcessor
 
     private async Task RetrieveContentAsync(string url, TaskCompletionSource<string> tcs)
     {
-        var urlConfig = _scraperConfig?.Websites!.First(v => v.Domain == new Uri(url).Host);
+        var urlConfig = _scraperConfig?.Websites!.First(v => v.AcceptHost != null && v.AcceptHost.Any(x => x == new Uri(url).Host));
         bool usePw = urlConfig is { IsJs: true } && !url.EndsWith(".xml");
 
         try

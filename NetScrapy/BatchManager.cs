@@ -69,7 +69,7 @@ public class BatchManager
     {
         var lastAccess = _lastAccessPerDomain[domain];
         var minDelaySeconds = _scraperConfig?.Websites!
-            .Where(w => w.Domain == domain)
+            .Where(w => w.AcceptHost != null && w.AcceptHost.Any(host => host == domain))
             .Select(d => d.Timeout)
             .First();
 

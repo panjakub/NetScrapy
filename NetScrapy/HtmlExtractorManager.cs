@@ -11,8 +11,7 @@ class HtmlExtractorManager
             .WriteTo.Console(theme: AnsiConsoleTheme.Code)
             .CreateLogger();
 
-        HtmlSelectorExtractor selectorExtractor = new HtmlSelectorExtractor();
-        var urlConfig = config?.Websites!.First(v => v.Domain == new Uri(urlContent.url).Host);
+        var urlConfig = config?.Websites!.First(v => v.AcceptHost != null && v.AcceptHost.Any(host => host == new Uri(urlContent.url).Host));
 
         try
         {
