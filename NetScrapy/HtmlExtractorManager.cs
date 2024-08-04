@@ -1,17 +1,23 @@
-﻿using Serilog;
+﻿using Microsoft.IdentityModel.Tokens;
+using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
 
 namespace NetScrapy;
 
 class HtmlExtractorManager
 {
-    public async Task ExtractDataFromHtmlAsync((string url, string content) urlContent, ScraperConfig? config)
+    private ScrapedDataModel? _result = null;
+
+    public event Action<string>  ActivityDetected;  
+    
+    public async Task<ScrapedDataModel?> ExtractDataFromHtmlAsync((string url, string content) urlContent, ScraperConfig? config)
     {
         await using var log = new LoggerConfiguration()
             .WriteTo.Console(theme: AnsiConsoleTheme.Code)
             .CreateLogger();
 
-        var urlConfig = config?.Websites!.First(v => v.AcceptHost != null && v.AcceptHost.Any(host => host == new Uri(urlContent.url).Host));
+        var (url, content) = urlContent;
+        var urlConfig = config?.Websites!.First(v => v.AcceptHost != null && v.AcceptHost.Any(host => host == new Uri(url).Host));
 
         try
         {
@@ -19,21 +25,32 @@ class HtmlExtractorManager
 
             foreach (var selector in urlConfig?.Selectors!)
             {
-                var value = HtmlSelectorExtractor.ParseWithSelector(urlContent.content, selector.Value);
+                var value = HtmlSelectorExtractor.ParseWithSelector(content, selector.Value);
                 elements[selector.Key] = value;
+
+                if (elements.All(pair => pair.Value.IsNullOrEmpty()))
+                {
+                    elements.Add("Detected", DateTime.Now.ToString());
+                    ActivityDetected.Invoke(url);
+                    log.Warning($"Activity detected for {url}");
+                }
             }
 
-            var result = new ScrapedDataModel
+            _result = new ScrapedDataModel
             {
-                Website = new Uri(urlContent.url).Host,
-                Url = urlContent.url,
+                Website = new Uri(url).Host,
+                Url = url,
                 Elements = elements,
                 Created = DateTime.UtcNow
             };
 
-            log.Information("Successfully scraped: {Url} - Elements: {@Elements}", result.Url, elements);
+            if (!_result.Elements.ContainsKey("Detected"))
+            {
+                log.Information("Successfully scraped: {Url} - Elements: {@Elements}", _result.Url, elements);
+            }
 
-            await ScrapedDataStorage.OutputToSqlServer(result);
+            // await ScrapedDataStorage.OutputToSqlServer(result);
+
         }
         catch (Exception ex)
         {
@@ -46,5 +63,6 @@ class HtmlExtractorManager
         {
             await Log.CloseAndFlushAsync();
         }
+        return _result;
     }
 }
