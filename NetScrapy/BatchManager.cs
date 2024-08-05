@@ -1,5 +1,4 @@
-﻿using System.Collections.Concurrent;
-using Serilog;
+﻿using Serilog;
 using Serilog.Core;
 using Serilog.Sinks.SystemConsole.Themes;
 
@@ -12,7 +11,7 @@ public class BatchManager
     private readonly BatchProcessor _batchProcessor;
     private readonly ScraperConfig? _scraperConfig;
     private readonly HtmlExtractorManager _extractor;
-    private readonly Logger log;
+    private readonly Logger _log;
 
     public BatchManager(Dictionary<string, Queue<string?>> selectedUris, ScraperConfig? config, BatchProcessor batchProcessor)
     {
@@ -22,7 +21,7 @@ public class BatchManager
         _scraperConfig = config;
         _extractor = new HtmlExtractorManager();
         
-        log = new LoggerConfiguration()
+        _log = new LoggerConfiguration()
             .WriteTo.Console(theme: AnsiConsoleTheme.Code)
             .CreateLogger();
         
@@ -31,9 +30,9 @@ public class BatchManager
     private void HtmlExtractorOnActivityDetected(string url)
     {
         _lastAccessPerDomain[new Uri(url).Host] = DateTime.Now + TimeSpan.FromMinutes(5);
-        log.Warning($"Due to suspected detection at {new Uri(url).Host} adding 5 minute cooldown (affected URL: {url}");
+        _log.Warning($"Due to suspected detection at {new Uri(url).Host} adding 5 minute cooldown (affected URL: {url}");
         _selectedUris[new Uri(url).Host].Enqueue(url);
-        log.Warning($"Re-adding {url} at the back of the queue.");
+        _log.Warning($"Re-adding {url} at the back of the queue.");
     }
 
     public async Task RunAndSaveAsync()
@@ -48,11 +47,11 @@ public class BatchManager
             {
                 var output = await _extractor.ExtractDataFromHtmlAsync((result.Key, result.Value), _scraperConfig);
 
-                if (output.Elements.ContainsKey("Detected"))
+                if (output!.Elements!.ContainsKey("Detected"))
                 {
-                    HtmlExtractorOnActivityDetected(output.Url);
+                    HtmlExtractorOnActivityDetected(output.Url!);
                 }
-                else if (output != null)
+                else
                 {
                     await ScrapedDataStorage.OutputToSqlServer(output);
                 }
@@ -64,8 +63,6 @@ public class BatchManager
     private Queue<string> GetNextBatch()
     {
         Queue<string> batch = new Queue<string>();
-
-        // var lastAccessPerDomain = _selectedUris.Keys.ToDictionary(k => k, _ => DateTime.Now);
 
         while (_selectedUris.Values.Any(queue => queue.Count > 0))
         {

@@ -22,5 +22,5 @@ public class JsonConfigManager
         }
     }
 
-    public static Exception FileNotFoundException { get; set; }
+    private static Exception FileNotFoundException { get; set; } = new FileNotFoundException();
 }

@@ -1,4 +1,5 @@
-﻿using Microsoft.IdentityModel.Tokens;
+﻿using System.Globalization;
+using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
 
@@ -6,9 +7,9 @@ namespace NetScrapy;
 
 class HtmlExtractorManager
 {
-    private ScrapedDataModel? _result = null;
+    private ScrapedDataModel? _result;
 
-    public event Action<string>  ActivityDetected;  
+    public event Action<string>?  ActivityDetected;  
     
     public async Task<ScrapedDataModel?> ExtractDataFromHtmlAsync((string url, string content) urlContent, ScraperConfig? config)
     {
@@ -30,8 +31,8 @@ class HtmlExtractorManager
 
                 if (elements.All(pair => pair.Value.IsNullOrEmpty()))
                 {
-                    elements.Add("Detected", DateTime.Now.ToString());
-                    ActivityDetected.Invoke(url);
+                    elements.Add("Detected", DateTime.Now.ToString(CultureInfo.InvariantCulture));
+                    ActivityDetected?.Invoke(url);
                     log.Warning($"Activity detected for {url}");
                 }
             }
@@ -41,16 +42,14 @@ class HtmlExtractorManager
                 Website = new Uri(url).Host,
                 Url = url,
                 Elements = elements,
-                Created = DateTime.UtcNow
+                Created = DateTime.UtcNow,
+                HtmlSnapshot = content
             };
 
             if (!_result.Elements.ContainsKey("Detected"))
             {
-                log.Information("Successfully scraped: {Url} - Elements: {@Elements}", _result.Url, elements);
+                log.Information("Successfully scraped Elements: {@Elements} from {Url} ", elements, _result.Url);
             }
-
-            // await ScrapedDataStorage.OutputToSqlServer(result);
-
         }
         catch (Exception ex)
         {
