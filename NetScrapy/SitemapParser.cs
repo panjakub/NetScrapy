@@ -51,7 +51,6 @@ public class SitemapParser
 
     private async Task<Queue<string?>> ParseSitemapXml(string url, string sitemapContent)
     {
-        //TODO: add sitemap namespace handling
         var nsOverride = _config?.Websites!
             .Where(w => w.AcceptHost != null && w.AcceptHost.Any(host => host == new Uri(url).Host))
             .Select(d => d.sitemapNamespace)
