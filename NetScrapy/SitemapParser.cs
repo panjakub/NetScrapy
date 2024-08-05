@@ -5,6 +5,13 @@ namespace NetScrapy;
 
 public class SitemapParser
 {
+    private readonly ScraperConfig _config;
+    
+    public SitemapParser(ScraperConfig config)
+    {
+        _config = config;
+    }
+    
     public async Task<Dictionary<string, Queue<string?>>> BatchParseSitemapsAsync(Dictionary<string, string> data)
     {
         var processingTasks = data.Select(async kvp =>
@@ -12,7 +19,7 @@ public class SitemapParser
             try
             {
                 return new KeyValuePair<string, Queue<string?>>(
-                    kvp.Key, await ParseSingleSitemapAsync(kvp.Value));
+                    kvp.Key, await ParseSingleSitemapAsync(kvp.Key, kvp.Value));
             }
             catch (Exception)
             {
@@ -25,11 +32,11 @@ public class SitemapParser
     }
 
 
-    private async Task<Queue<string?>> ParseSingleSitemapAsync(string sitemapContent)
+    private async Task<Queue<string?>> ParseSingleSitemapAsync(string url, string sitemapContent)
     {
         if (AssumeMarkup(sitemapContent))
         {
-            return await ParseSitemapXml(sitemapContent);
+            return await ParseSitemapXml(url, sitemapContent);
         }
         else
         {
@@ -42,24 +49,32 @@ public class SitemapParser
         return content.TrimStart().StartsWith("<");
     }
 
-    private async Task<Queue<string?>> ParseSitemapXml(string sitemapContent)
+    private async Task<Queue<string?>> ParseSitemapXml(string url, string sitemapContent)
     {
+        //TODO: add sitemap namespace handling
+        var nsOverride = _config?.Websites!
+            .Where(w => w.AcceptHost != null && w.AcceptHost.Any(host => host == new Uri(url).Host))
+            .Select(d => d.sitemapNamespace)
+            .First() ?? "http://www.sitemaps.org/schemas/sitemap/0.9";
+
+        Console.WriteLine($"sitemap for {url} is {nsOverride}");
+        
         try
         {
-            XNamespace ns = "http://www.sitemaps.org/schemas/sitemap/0.9";
+            XNamespace ns = nsOverride;
             XDocument doc = XDocument.Parse(sitemapContent);
 
             var urls = new Queue<string?>(doc.Descendants(ns + "url")
                 .Select(u => u.Element(ns + "loc")?.Value)
-                .Where(url => !string.IsNullOrEmpty(url)));
+                .Where(uri => !string.IsNullOrEmpty(uri)));
 
                 var nestedSitemaps = new Queue<string?>(doc.Descendants(ns + "sitemap")
                     .Select(s => s.Element(ns + "loc")?.Value)
-                    .Where(url => !string.IsNullOrEmpty(url)));
+                    .Where(uri => !string.IsNullOrEmpty(uri)));
 
             foreach (var nestedSitemapUrl in nestedSitemaps)
             {
-                var nestedTemp = await ParseSingleSitemapAsync(sitemapContent: nestedSitemapUrl!);
+                var nestedTemp = await ParseSingleSitemapAsync(url, sitemapContent: nestedSitemapUrl!);
                 urls.Enqueue(nestedTemp.Dequeue());
             }
 

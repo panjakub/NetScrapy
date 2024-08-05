@@ -36,7 +36,7 @@ namespace NetScrapy
             log.Information($"Started at {startTime}");
             
             BatchProcessor batchProcessor = new BatchProcessor(config!);
-            SitemapParser sitemapParser = new SitemapParser();
+            SitemapParser sitemapParser = new SitemapParser(config!);
 
             foreach (var website in config?.Websites!)
             {

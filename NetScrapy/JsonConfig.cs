@@ -30,6 +30,9 @@ public class WebsiteConfig
 
     [JsonPropertyName("sitemapUrls")] 
     public List<string?> SitemapUrls { get; set; } = new();
+    
+    [JsonPropertyName("sitemapNamespace")]
+    public string? sitemapNamespace { get; set; } 
 
     [JsonPropertyName("timeout")]
     public int Timeout { get; set; }
