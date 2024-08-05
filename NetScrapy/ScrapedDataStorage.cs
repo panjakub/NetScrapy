@@ -17,6 +17,7 @@ public static class ScrapedDataStorage
             existingEntry.Website = scrapedData.Website;
             existingEntry.Elements = scrapedData.Elements;
             existingEntry.Created = scrapedData.Created;
+            existingEntry.HtmlSnapshot = scrapedData.HtmlSnapshot;
             context.ScrapedData.Update(existingEntry);
         }
         else
