@@ -9,7 +9,6 @@ namespace NetScrapy
         static async Task Main(string?[] args)
         {
             ScraperConfig? config;
-            // var configManager = new JsonConfigManager();
 
             await using var log = new LoggerConfiguration()
                 .WriteTo.Console(theme: AnsiConsoleTheme.Code)
@@ -57,27 +56,27 @@ namespace NetScrapy
                     log.Warning("    No selectors found");
                 }
             }
-            // var sitemapUris = config!.Websites!.Select(w => w.SitemapUrls.ForEach(s));
 
             var sitemapUris = config.Websites!.SelectMany(s => s.SitemapUrls);
             Dictionary<string, string> rawSitemaps = await batchProcessor.GetBatchContentAsync(sitemapUris!);
 
+            //TODO: add crawling for urisToParse without using sitemap
+            
             var urisToParse = sitemapParser.BatchParseSitemapsAsync(rawSitemaps).Result
                 .GroupBy(pair => new Uri(pair.Key).Host)
                 .ToDictionary(
                     group => group.Key,
                     group => new Queue<string?>(
                         group.SelectMany(pair => pair.Value
-                            .Where(m => Regex.IsMatch(m!, config.Websites!
+                            .Where(m => Regex.Match(m!, config.Websites!
                                 .First(d => d.AcceptHost != null && d.AcceptHost.Any(host => host == new Uri(pair.Key).Host))
-                                .ProductUrlPattern!)
+                                .ProductUrlPattern!, RegexOptions.IgnoreCase).Success
                             )
                         )
                     )
                 );
 
-
-            int totalItems = 0;
+            var totalItems = 0;
             foreach (var item in urisToParse)
             {
                 log.Information($"For {item.Key} : {item.Value.Count} items found.");
@@ -86,7 +85,7 @@ namespace NetScrapy
 
             log.Information($"{totalItems} elements to scrape.");
 
-            BatchManager scraper = new BatchManager(urisToParse, config, batchProcessor);
+            var scraper = new BatchManager(urisToParse, config, batchProcessor);
             await scraper.RunAndSaveAsync();
 
             var finishTime = DateTime.Now;
