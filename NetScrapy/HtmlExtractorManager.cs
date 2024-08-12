@@ -29,12 +29,10 @@ class HtmlExtractorManager
                 var value = HtmlSelectorExtractor.ParseWithSelector(content, selector.Value);
                 elements[selector.Key] = value;
 
-                if (elements.All(pair => pair.Value.IsNullOrEmpty()))
-                {
-                    elements.Add("Detected", DateTime.Now.ToString(CultureInfo.InvariantCulture));
-                    ActivityDetected?.Invoke(url);
-                    log.Warning($"Activity detected for {url}");
-                }
+                if (!elements.All(pair => pair.Value.IsNullOrEmpty())) continue;
+                elements.Add("Detected", DateTime.Now.ToString(CultureInfo.InvariantCulture));
+                ActivityDetected?.Invoke(url);
+                log.Warning($"Activity detected for {url}");
             }
 
             _result = new ScrapedDataModel

@@ -10,7 +10,7 @@ public class BatchManager
     private readonly Dictionary<string, DateTime> _lastAccessPerDomain;
     private readonly BatchProcessor _batchProcessor;
     private readonly ScraperConfig? _scraperConfig;
-    private readonly HtmlExtractorManager _extractor;
+    private readonly HtmlExtractorManager _extractor = new HtmlExtractorManager();
     private readonly Logger _log;
 
     public BatchManager(Dictionary<string, Queue<string?>> selectedUris, ScraperConfig? config, BatchProcessor batchProcessor)
@@ -19,7 +19,6 @@ public class BatchManager
         _lastAccessPerDomain = selectedUris.Keys.ToDictionary(k => k, _ => DateTime.Now);
         _batchProcessor = batchProcessor;
         _scraperConfig = config;
-        _extractor = new HtmlExtractorManager();
         
         _log = new LoggerConfiguration()
             .WriteTo.Console(theme: AnsiConsoleTheme.Code)

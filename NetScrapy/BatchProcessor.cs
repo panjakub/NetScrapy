@@ -52,7 +52,7 @@ public class BatchProcessor
     private async Task RetrieveContentAsync(string url, TaskCompletionSource<string> tcs)
     {
         var urlConfig = _scraperConfig?.Websites!.First(v => v.AcceptHost != null && v.AcceptHost.Any(x => x == new Uri(url).Host));
-        bool usePw = urlConfig is { IsJs: true } && !url.EndsWith(".xml");
+        var usePw = urlConfig is { IsJs: true } && !url.EndsWith(".xml");
 
         try
         {
