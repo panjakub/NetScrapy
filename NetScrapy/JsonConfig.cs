@@ -32,7 +32,7 @@ public class WebsiteConfig
     public List<string?> SitemapUrls { get; set; } = new();
     
     [JsonPropertyName("sitemapNamespace")]
-    public string? sitemapNamespace { get; set; } 
+    public string? SitemapNamespace { get; set; } 
 
     [JsonPropertyName("timeout")]
     public int Timeout { get; set; }

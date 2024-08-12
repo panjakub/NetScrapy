@@ -6,12 +6,12 @@ namespace NetScrapy;
 public class SitemapParser
 {
     private readonly ScraperConfig _config;
-    
+
     public SitemapParser(ScraperConfig config)
     {
         _config = config;
     }
-    
+
     public async Task<Dictionary<string, Queue<string?>>> BatchParseSitemapsAsync(Dictionary<string, string> data)
     {
         var processingTasks = data.Select(async kvp =>
@@ -53,11 +53,11 @@ public class SitemapParser
     {
         var nsOverride = _config?.Websites!
             .Where(w => w.AcceptHost != null && w.AcceptHost.Any(host => host == new Uri(url).Host))
-            .Select(d => d.sitemapNamespace)
+            .Select(d => d.SitemapNamespace)
             .First() ?? "http://www.sitemaps.org/schemas/sitemap/0.9";
 
-        Console.WriteLine($"sitemap for {url} is {nsOverride}");
-        
+        //Console.WriteLine($"sitemap for {url} is {nsOverride}");
+
         try
         {
             XNamespace ns = nsOverride;
@@ -67,9 +67,9 @@ public class SitemapParser
                 .Select(u => u.Element(ns + "loc")?.Value)
                 .Where(uri => !string.IsNullOrEmpty(uri)));
 
-                var nestedSitemaps = new Queue<string?>(doc.Descendants(ns + "sitemap")
-                    .Select(s => s.Element(ns + "loc")?.Value)
-                    .Where(uri => !string.IsNullOrEmpty(uri)));
+            var nestedSitemaps = new Queue<string?>(doc.Descendants(ns + "sitemap")
+                .Select(s => s.Element(ns + "loc")?.Value)
+                .Where(uri => !string.IsNullOrEmpty(uri)));
 
             foreach (var nestedSitemapUrl in nestedSitemaps)
             {
