@@ -62,13 +62,13 @@ namespace NetScrapy
 
             //TODO: add crawling for urisToParse without using sitemap
             
-            var urisToParse = sitemapParser!.BatchParseSitemapsAsync(rawSitemaps!).Result!
+            var urisToParse = sitemapParser.BatchParseSitemapsAsync(rawSitemaps).Result
                 .GroupBy(pair => config!.Websites!
-                    .First(d => d!.AcceptHost! != null && d!.AcceptHost!
-                    .Any(host => host! == new Uri(pair!.Key!).Host!))
+                    .First(d => d.AcceptHost! != null && d.AcceptHost!
+                    .Any(host => host! == new Uri(pair.Key).Host))
                     .AcceptHost!.First()!)
                 .ToDictionary(
-                    group => group.Key, //config.Websites!.First(d => d.AcceptHost != null && d.AcceptHost.Any(host => host == new Uri(pair.Key).Host)
+                    group => group.Key,
                     group => new Queue<string?>(
                         group.SelectMany(pair => pair.Value
                             .Where(m => Regex.Match(m!, config.Websites!
@@ -88,7 +88,7 @@ namespace NetScrapy
 
             log.Information($"{totalItems} elements to scrape.");
 
-            var scraper = new BatchManager(urisToParse!, config, batchProcessor);
+            var scraper = new BatchManager(urisToParse, config, batchProcessor);
             await scraper.RunAndSaveAsync();
 
             var finishTime = DateTime.Now;

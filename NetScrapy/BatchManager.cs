@@ -15,7 +15,7 @@ public class BatchManager
     private readonly Logger _log;
     private readonly RobotsHandler _robotsHandler;
     private Dictionary<string, List<string>> _discoveredUris = new();
-    private List<string> visitedUris = new();
+    private List<string> _visitedUris = new();
 
 
     public BatchManager(Dictionary<string, Queue<string?>> selectedUris, ScraperConfig? config, BatchProcessor batchProcessor)
@@ -59,7 +59,7 @@ public class BatchManager
             foreach (var result in results)
             {
                 var output = await _extractor.ExtractDataFromHtmlAsync((result.Key, result.Value), _scraperConfig);
-                visitedUris.Add(result.Key);
+                _visitedUris.Add(result.Key);
                 
                 foreach (var kvp in _extractor.ExtractLinks(result.Key, result.Value))
                 {
@@ -76,12 +76,12 @@ public class BatchManager
                     //if (_selectedUris.ContainsKey(new Uri(uriPartial).Host)) continue;
 
                     if (
-                        (await _robotsHandler.IsAllowed(uriPartial) &! _selectedUris[_discoveredUris.Keys.First()].Any(u => u == uriPartial))
+                        (await _robotsHandler.IsAllowed(uriPartial) & _selectedUris[_discoveredUris.Keys.First()].All(u => u != uriPartial))
                         && Regex.Match(uriPartial, urlPattern, RegexOptions.IgnoreCase).Success
                         && uriPartial != result.Key
                         && !(Regex.Match(uriPartial, @"\.(jpg|pdf|png|xml)", RegexOptions.IgnoreCase).Success)
                         && !(_discoveredUris.Any(k => k.Key.Contains(uriPartial)))
-                        && !(visitedUris.Contains(uriPartial))
+                        && !(_visitedUris.Contains(uriPartial))
                         )
                     {
                         _selectedUris[_discoveredUris.Keys.First()].Enqueue(uriPartial);
@@ -118,10 +118,7 @@ public class BatchManager
                         batch.Enqueue(_selectedUris[domain].Dequeue()!);
                         _lastAccessPerDomain[domain] = DateTime.Now;
                     }
-                    catch (InvalidOperationException)
-                    {
-                        continue;
-                    }
+                    catch (InvalidOperationException) {}
                 }
                 else
                 {

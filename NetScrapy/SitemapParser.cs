@@ -56,8 +56,6 @@ public class SitemapParser
             .Select(d => d.SitemapNamespace)
             .First() ?? "http://www.sitemaps.org/schemas/sitemap/0.9";
 
-        //Console.WriteLine($"sitemap for {url} is {nsOverride}");
-
         try
         {
             XNamespace ns = nsOverride;

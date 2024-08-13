@@ -37,7 +37,6 @@ public class BatchProcessor
             try
             {
                 results[kvp.Key] = kvp.Value.Task.Result;
-                //Console.WriteLine(results[kvp.Value.Task.Result]);
             }
             catch (AggregateException e)
             {
