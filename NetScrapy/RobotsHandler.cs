@@ -1,4 +1,6 @@
 ﻿using System.Collections.Concurrent;
+using System.Net;
+using System.Text.RegularExpressions;
 using Serilog;
 using Serilog.Core;
 using Serilog.Sinks.SystemConsole.Themes;
@@ -13,8 +15,10 @@ namespace NetScrapy
         private readonly ConcurrentDictionary<string, Task> _fetchTasks;
         private readonly string _userAgent;
         private readonly Logger _log;
+        private Dictionary<string, List<string>> robotsCache = new Dictionary<string, List<string>>();
 
-        public RobotsHandler(string userAgent, ScraperConfig config, Logger logger)
+
+        public RobotsHandler(string userAgent, ScraperConfig config)
         {
             _log = new LoggerConfiguration()
                 .WriteTo.Console(theme: AnsiConsoleTheme.Code)
@@ -47,70 +51,75 @@ namespace NetScrapy
             }
         }
 
-        public Task FetchRobotsTxtIfNeeded(string domain)
+        public async Task<bool> IsAllowed(string url)
         {
-            return _fetchTasks.GetOrAdd(domain, FetchRobotsTxtInternal);
-        }
-
-        private async Task FetchRobotsTxtInternal(string domain)
-        {
-            try
+            string domain = new Uri(url).Host;
+            if (!string.IsNullOrEmpty(domain))
             {
-                var robotsUrl = $"https://{domain}/robots.txt";
-                var content = await _httpClient.GetContentAsync(robotsUrl);
-                ParseRobotsTxt(domain, content);
-            }
-            catch (HttpRequestException ex)
-            {
-                _disallowedPaths[domain] = new List<string>();
-            }
-        }
-
-        private void ParseRobotsTxt(string domain, string content)
-        {
-            var lines = content.Split('\n');
-            bool relevantUserAgent = false;
-            var disallowedPaths = new List<string>();
-
-            foreach (var line in lines)
-            {
-                var trimmedLine = line.Trim();
-                if (trimmedLine.StartsWith("User-agent:", StringComparison.OrdinalIgnoreCase))
                 {
-                    var agent = trimmedLine.Substring("User-agent:".Length).Trim();
-                    relevantUserAgent = agent == "*" || agent.Equals(_userAgent, StringComparison.OrdinalIgnoreCase);
-                }
-                else if (relevantUserAgent && trimmedLine.StartsWith("Disallow:", StringComparison.OrdinalIgnoreCase))
-                {
-                    var path = trimmedLine.Substring("Disallow:".Length).Trim();
-                    if (!string.IsNullOrEmpty(path))
+                    List<string> disallowedRules;
+
+                    if (!robotsCache.TryGetValue(domain, out disallowedRules))
                     {
-                        disallowedPaths.Add(path);
+                        disallowedRules = await DownloadAndParseRobotsTxt(url);
+                        robotsCache[domain] = disallowedRules;
                     }
+                    return !disallowedRules.Any(rule => url.StartsWith(rule));
                 }
+            } else
+            {
+                return false;
             }
 
-            _disallowedPaths[domain] = disallowedPaths;
         }
 
-        public bool IsAllowed(string url)
+        private async Task<List<string>> DownloadAndParseRobotsTxt(string url)
         {
-            var uri = new Uri(url);
-            var domain = uri.Host;
-            var path = uri.PathAndQuery;
+            string? robotsUrl = _scraperConfig?.Websites!
+            .Where(w => w.AcceptHost != null && w.AcceptHost.Any(host => host == new Uri(url).Host))
+            .Select(d => d.RobotsFile)
+            .DefaultIfEmpty(null).First();
 
-            if (_disallowedPaths.TryGetValue(domain, out var disallowedPaths))
+            List<string> disallowedRules = new List<string>();
+
+            if (robotsUrl != null)
             {
-                foreach (var disallowedPath in disallowedPaths)
+                try
                 {
-                    if (path.StartsWith(disallowedPath))
-                    {
-                        return false;
-                    }
+                        string robotsContent = await _httpClient.GetContentAsync(robotsUrl);
+                        using (StringReader reader = new StringReader(robotsContent))
+                        {
+                            string line;
+                            string currentUserAgent = null;
+
+                            while ((line = reader.ReadLine()) != null)
+                            {
+                                line = line.Trim();
+                                if (line.StartsWith("User-agent:"))
+                                {
+                                    currentUserAgent = line.Substring("User-agent:".Length).Trim();
+                                }
+                                else if (line.StartsWith("Disallow:") && (currentUserAgent == "*" || currentUserAgent == _userAgent))
+                                {
+                                    string rule = line.Substring("Disallow:".Length).Trim();
+                                    if (!string.IsNullOrEmpty(rule))
+                                    {
+                                        disallowedRules.Add(rule);
+                                    }
+                                }
+                            }
+                        }
+                }
+                catch (WebException)
+                {
+                    throw;
+                    // Handle robots.txt download errors (e.g., 404)
+                    // You might want to log the error or allow access by default
                 }
             }
 
-            return true;
+            return disallowedRules;
         }
     }
-}
+
+} 

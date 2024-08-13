@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using Serilog.Core;
 using Serilog.Sinks.SystemConsole.Themes;
 
 namespace NetScrapy;
@@ -8,15 +9,19 @@ namespace NetScrapy;
 class HtmlExtractorManager
 {
     private ScrapedDataModel? _result;
+    private Logger _log;
 
-    public event Action<string>?  ActivityDetected;  
-    
-    public async Task<ScrapedDataModel?> ExtractDataFromHtmlAsync((string url, string content) urlContent, ScraperConfig? config)
+    public event Action<string>?  ActivityDetected;
+
+    public HtmlExtractorManager()
     {
-        await using var log = new LoggerConfiguration()
+        _log = new LoggerConfiguration()
             .WriteTo.Console(theme: AnsiConsoleTheme.Code)
             .CreateLogger();
+    }
 
+    public async Task<ScrapedDataModel?> ExtractDataFromHtmlAsync((string url, string content) urlContent, ScraperConfig? config)
+    {
         var (url, content) = urlContent;
         var urlConfig = config?.Websites!.First(v => v.AcceptHost != null && v.AcceptHost.Any(host => host == new Uri(url).Host));
 
@@ -32,7 +37,7 @@ class HtmlExtractorManager
                 if (!elements.All(pair => pair.Value.IsNullOrEmpty())) continue;
                 elements.Add("Detected", DateTime.Now.ToString(CultureInfo.InvariantCulture));
                 ActivityDetected?.Invoke(url);
-                log.Warning($"Activity detected for {url}");
+                _log.Warning($"Activity detected for {url}");
             }
 
             _result = new ScrapedDataModel
@@ -46,20 +51,46 @@ class HtmlExtractorManager
 
             if (!_result.Elements.ContainsKey("Detected"))
             {
-                log.Information("Successfully scraped Elements: {@Elements} from {Url} ", elements, _result.Url);
+                _log.Information("Successfully scraped Elements: {@Elements} from {Url} ", elements, _result.Url);
             }
         }
         catch (Exception ex)
         {
-            log.Error(ex.Source!);
-            log.Error(ex.Message);
-            log.Error(ex.InnerException!.ToString());
-            log.Error(ex.StackTrace!);
+            _log.Error(ex.Source!);
+            _log.Error(ex.Message);
+            _log.Error(ex.InnerException!.ToString());
+            _log.Error(ex.StackTrace!);
         }
-        finally
-        {
-            await Log.CloseAndFlushAsync();
-        }
+
         return _result;
+    }
+
+    public Dictionary<string, List<string>> ExtractLinks(string url, string content)
+    {
+        var htmlDoc = new HtmlAgilityPack.HtmlDocument();
+        htmlDoc.LoadHtml(content);
+
+        var domain = new Uri(url).Host;
+
+        var links = new List<string>();
+        var nodes = htmlDoc.DocumentNode.SelectNodes("//a[@href]");
+
+        if (nodes != null)
+        {
+            foreach (var node in nodes)
+            {
+                string href = node.GetAttributeValue("href", "");
+                if (!string.IsNullOrEmpty(href))
+                {
+                    links.Add(new Uri(new Uri(url), href).AbsoluteUri);
+                }
+            }
+        }
+
+        var output = new Dictionary<string, List<string>>() { { domain, links } };
+        _log.Information($"Discovered {links.Count} new urls.");
+
+
+        return output;
     }
 }

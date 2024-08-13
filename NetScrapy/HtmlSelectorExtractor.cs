@@ -23,27 +23,4 @@ public static class HtmlSelectorExtractor
             return node.InnerText.Trim();
         }
     }
-
-    public static IEnumerable<string> ExtractLinks(string html, string baseUrl)
-    {
-        var htmlDoc = new HtmlAgilityPack.HtmlDocument();
-        htmlDoc.LoadHtml(html);
-
-        var links = new List<string>();
-        var nodes = htmlDoc.DocumentNode.SelectNodes("//a[@href]");
-
-        if (nodes != null)
-        {
-            foreach (var node in nodes)
-            {
-                string href = node.GetAttributeValue("href", "");
-                if (!string.IsNullOrEmpty(href))
-                {
-                    links.Add(new Uri(new Uri(baseUrl), href).AbsoluteUri);
-                }
-            }
-        }
-
-        return links;
-    }
 }

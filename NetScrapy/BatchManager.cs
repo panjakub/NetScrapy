@@ -1,6 +1,7 @@
 ﻿using Serilog;
 using Serilog.Core;
 using Serilog.Sinks.SystemConsole.Themes;
+using System.Text.RegularExpressions;
 
 namespace NetScrapy;
 
@@ -12,6 +13,10 @@ public class BatchManager
     private readonly ScraperConfig? _scraperConfig;
     private readonly HtmlExtractorManager _extractor = new HtmlExtractorManager();
     private readonly Logger _log;
+    private readonly RobotsHandler _robotsHandler;
+    private Dictionary<string, List<string>> _discoveredUris = new();
+    private List<string> visitedUris = new();
+
 
     public BatchManager(Dictionary<string, Queue<string?>> selectedUris, ScraperConfig? config, BatchProcessor batchProcessor)
     {
@@ -19,6 +24,7 @@ public class BatchManager
         _lastAccessPerDomain = selectedUris.Keys.ToDictionary(k => k, _ => DateTime.Now);
         _batchProcessor = batchProcessor;
         _scraperConfig = config;
+        _robotsHandler = new RobotsHandler("*", _scraperConfig!);
         
         _log = new LoggerConfiguration()
             .WriteTo.Console(theme: AnsiConsoleTheme.Code)
@@ -34,9 +40,17 @@ public class BatchManager
         _log.Warning($"Re-adding {url} at the back of the queue.");
     }
 
+    private string GetBaseUrl(string url)
+    {
+        Uri uri = new Uri(url);
+        return uri.GetLeftPart(UriPartial.Path);
+    }
+
+
     public async Task RunAndSaveAsync()
     {
         _extractor.ActivityDetected += HtmlExtractorOnActivityDetected;
+
         while (_selectedUris.Any(d => d.Value.Count > 0))
         {
             Queue<string> batch = GetNextBatch();
@@ -45,6 +59,35 @@ public class BatchManager
             foreach (var result in results)
             {
                 var output = await _extractor.ExtractDataFromHtmlAsync((result.Key, result.Value), _scraperConfig);
+                visitedUris.Add(result.Key);
+                
+                foreach (var kvp in _extractor.ExtractLinks(result.Key, result.Value))
+                {
+                    _discoveredUris.TryAdd(kvp.Key, kvp.Value);
+                }
+
+                foreach (var discoveredUri in _discoveredUris.Values.First())
+                {
+                    var uriPartial = GetBaseUrl(discoveredUri);
+                    var urlPattern = _scraperConfig!.Websites!
+                                .First(d => d.AcceptHost != null && d.AcceptHost.Any(host => host == new Uri(result.Key).Host))
+                                .ProductUrlPattern!;
+
+                    //if (_selectedUris.ContainsKey(new Uri(uriPartial).Host)) continue;
+
+                    if (
+                        (await _robotsHandler.IsAllowed(uriPartial) &! _selectedUris[_discoveredUris.Keys.First()].Any(u => u == uriPartial))
+                        && Regex.Match(uriPartial, urlPattern, RegexOptions.IgnoreCase).Success
+                        && uriPartial != result.Key
+                        && !(Regex.Match(uriPartial, @"\.(jpg|pdf|png|xml)", RegexOptions.IgnoreCase).Success)
+                        && !(_discoveredUris.Any(k => k.Key.Contains(uriPartial)))
+                        && !(visitedUris.Contains(uriPartial))
+                        )
+                    {
+                        _selectedUris[_discoveredUris.Keys.First()].Enqueue(uriPartial);
+                        _log.Information($"Added {uriPartial} to queue for {result.Key}");
+                    }
+                }
 
                 if (output!.Elements!.ContainsKey("Detected"))
                 {
@@ -77,7 +120,7 @@ public class BatchManager
                     }
                     catch (InvalidOperationException)
                     {
-                        _selectedUris.Remove(domain);
+                        continue;
                     }
                 }
                 else
@@ -90,7 +133,6 @@ public class BatchManager
 
         return batch;
     }
-
 
     bool CanAccessDomain(string domain)
     {

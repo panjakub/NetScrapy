@@ -30,6 +30,9 @@ public class WebsiteConfig
 
     [JsonPropertyName("sitemapUrls")] 
     public List<string?> SitemapUrls { get; set; } = new();
+
+    [JsonPropertyName("RobotsFile")]
+    public string? RobotsFile { get; set; }
     
     [JsonPropertyName("sitemapNamespace")]
     public string? SitemapNamespace { get; set; } 
